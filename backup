@@ -35,7 +35,8 @@ if [ "$file_backups" = true ]; then
     starttime=$(date +%s)
     if [ -n "$notify_url" ]; then
         printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
-        curl --silent -X POST -d "event=backup_started&bucket=$bucket&type=files&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid" $notify_url > /dev/null
+        servertime=$(date)
+        curl --silent -X POST -d "event=backup_started&bucket=$bucket&type=files&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid&servertime=$servertime" $notify_url > /dev/null
     fi
 
     # Dump and zip
@@ -59,7 +60,8 @@ if [ "$file_backups" = true ]; then
         timetaken=$[$(date +%s)-$starttime]
         filesize=`wc -c < $tmpfile`
         printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
-        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=files&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid&time=$timetaken&size=$filesize" $notify_url > /dev/null
+        servertime=$(date)
+        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=files&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid&servertime=$servertime&time=$timetaken&size=$filesize" $notify_url > /dev/null
     fi
 
     # delete
@@ -70,8 +72,8 @@ fi
 # Database backups
 if [ "$db_backups" = true ]; then
     # make sure mysql can connect
-    mysqltest=$(mysql -u "$db_user" --password="$db_pass" -e "SELECT 1;" 2>&1;)
-    if [[ -n "$mysqltest" ]]; then
+    mysqltest=$(mysql -u "$db_user" --password="$db_pass" -e "SELECT 'MYSQLOK';" 2>&1;)
+    if [[ "$mysqltest" != *"MYSQLOK"* ]]; then
         echo "error: unable to connect to the MySQL server.";
         exit 1
     fi
@@ -86,7 +88,8 @@ if [ "$db_backups" = true ]; then
     # ping server
     if [ -n "$notify_url" ]; then
         printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
-        curl --silent -X POST -d "event=backup_started&bucket=$bucket&type=database&serverid=$serverid" $notify_url > /dev/null
+        servertime=$(date)
+        curl --silent -X POST -d "event=backup_started&bucket=$bucket&type=database&serverid=$serverid&servertime=$servertime" $notify_url > /dev/null
     fi
 
     # loop the databases
@@ -114,7 +117,8 @@ if [ "$db_backups" = true ]; then
         timetaken=$[$(date +%s)-$starttime]
         count=${#db_databases[@]}
         printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
-        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=database&serverid=$serverid&time=$timetaken&databases=" $notify_url > /dev/null
+        servertime=$(date)
+        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=database&serverid=$serverid&servertime=$servertime&time=$timetaken&databases=" $notify_url > /dev/null
     fi
 fi
 
