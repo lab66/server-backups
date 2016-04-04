@@ -79,6 +79,7 @@ Use the following:
             }
         ]
     }
+
 This will allow the user to access only the `FOLDER` path in `BUCKET`, this means we can use 1 bucket for multiple server's backups keeping them secure.
 
 6. Attach this "Customer Managed" policy to the User created previously.
