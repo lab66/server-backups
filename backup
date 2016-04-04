@@ -118,7 +118,7 @@ if [ "$db_backups" = true ]; then
         count=${#db_databases[@]}
         printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
         servertime=$(date)
-        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=database&serverid=$serverid&servertime=$servertime&time=$timetaken&databases=" $notify_url > /dev/null
+        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=database&serverid=$serverid&servertime=$servertime&time=$timetaken&databases=$count" $notify_url > /dev/null
     fi
 fi
 
