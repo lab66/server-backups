@@ -1,0 +1,83 @@
+#!/bin/bash
+if [ "$(whoami)" != 'root' ]; then
+    echo This script must be run under the root user
+    echo Use: sudo su root
+    exit 1
+fi
+
+if [ ! -f ".env" ]; then
+    echo "Error: Config not present, please copy .env.example to .env"
+    exit 1
+fi
+
+if [ ! -f ".s3cmd" ]; then
+    echo "Error: s3cmd has not been configured, please copy .s3cmd.example to .s3cmd"
+    exit 1
+fi
+
+if [ ! -e "/usr/bin/s3cmd" ]; then
+    echo "s3cmd not found, installing it..."
+    apt-get install s3cmd python-magic --force-yes --quiet --yes > /dev/null
+    cp config/backups/s3cmd.cfg ~/.s3cfg
+    if [ ! -e "/usr/bin/s3cmd" ]; then
+        echo "Error: s3cmd installation failed! script unable to continue..."
+        exit 1
+    else
+        echo "Success: s3cmd installed!"
+    fi
+fi
+
+crondir=`pwd`
+cron=`crontab -l | grep "$crondir/backup" | wc -l`
+if [ $cron != "0" ] ; then
+    echo -e "The backup is currently \e[32mENABLED\e[0m."
+else
+    echo -e "The backup is currently \e[31mDISABLED\e[0m."
+fi
+
+echo " "
+echo "What would you like to do?"
+echo " 1. Enable / Change Cron Time "
+if [ $cron != "0" ] ; then
+    echo " 2. Disable Cron "
+else
+    echo -e "\e[90m 2. Disable Cron \e[0m"
+fi
+echo " 3. Run the backup "
+echo " 0. Exit "
+echo " "
+read -p "Enter selection: " selection
+if [[ ! $selection =~ ^[123]$ ]]; then
+    echo "Error: Invalid selection: $selection"
+    exit 1;
+fi
+
+if [[ $selection == "1" ]]; then
+    echo "What time would you like the cron to run? e.g. 2 for 2AM, */1 for every hour."
+    read -p "Enter time: " crontime
+
+    echo -n "Enabling backup..."
+    if [ $cron != 0 ]; then
+        crontab -l | grep -v "$crondir/backup" | crontab -
+    fi
+    croncmd="$crontime * * * * $crondir/backup > /dev/null 2>&1"
+    `(crontab -l ; echo "$croncmd") | crontab -`
+    echo -e "\e[32mDone\e[0m."
+fi
+
+if [[ $selection == "2" ]]; then
+    # Remove cron
+    echo -n "Disabling backup..."
+    if [ $cron != 0 ]; then
+        crontab -l | grep -v "$crondir/backup" | crontab -
+    fi
+    echo -e "\e[32mDone\e[0m."
+fi
+
+if [[ $selection == "3" ]]; then
+    echo -e "\e[94mRunning backup\e[0m..."
+    echo " "
+    bash "$crondir/backup"
+    echo " "
+    echo -e "\e[32mDone\e[0m."
+fi;
