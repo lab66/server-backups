@@ -2,6 +2,15 @@
 
 This is the script we use to backup our servers to S3.
 
+# Download
+
+Download using the following commands:
+
+    wget https://github.com/lab66/server-backups/archive/master.tar.gz
+    tar zxvf master.tar.gz
+    rm master.tar.gz
+    cd server-backups-master
+
 ## Installation
 
 1. Copy `.env.example` to `.env`
