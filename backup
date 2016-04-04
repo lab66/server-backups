@@ -27,6 +27,7 @@ datefolder=`date +"%y%m %B %Y"`
 
 printf "backup started @ \e[1;33m%s\e[00m\n" `date +"%H:%m"`
 
+# File backups
 if [ "$file_backups" = true ]; then
     # Define our filenames
     filename="$datetime-files.tar.gz"
@@ -56,13 +57,64 @@ if [ "$file_backups" = true ]; then
         curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=files&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid&time=$timetaken&size=$filesize" $notify_url > /dev/null
     fi
 
-    # Upload
+    # upload
     printf "uploading \e[0;36m%s\e[00m to \e[0;35m%s\e[00m...\n" $tmpfile "s3://$bucket/$serverid/$datefolder/$filename"
     s3cmd put "$tmpfile" "s3://$bucket/$serverid/$datefolder/$filename"
 
-    # Delete
+    # delete
     printf "removing temporary file \e[0;36m%s\e[00m...\n" $tmpfile
     rm -f "$tmpfile"
+fi
+
+# Database backups
+if [ "$db_backups" = true ]; then
+    # make sure mysql can connect
+    mysqltest=$(mysql -u "$db_user" --password="$mysqlpass" -e "SELECT 1;" 2>&1;)
+    if [[ -n "$mysqltest" ]]; then
+        echo "error: unable to connect to the MySQL server.";
+        exit 1
+    fi
+
+    # if all databases, crawl databases
+    if [ $db_databases = "all" ]; then
+        db_databases=`mysql -u "$db_user" --password="$mysqlpass" -e "SHOW DATABASES;" | tr -d "| " | grep -v "\(Database\|information_schema\|innodb\|tmp\|performance_schema\|mysql\|test\)"`
+    fi
+
+    starttime=$(date +%s)
+
+    # ping server
+    if [ -n "$notify_url" ]; then
+        printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
+        curl --silent -X POST -d "event=backup_started&bucket=$bucket&type=database&serverid=$serverid" $notify_url > /dev/null
+    fi
+
+    # loop the databases
+    for db in $db_databases; do
+
+        # define our filenames
+        filename="$datetime-$db.sql.gz"
+        tmpfile="/tmp/$filename"
+
+        # export & save
+        printf "exporting database \e[0;36m%s\e[00m to \e[0;35m%s\e[00m...\n" $db $tmpfile
+        mysqldump -u "$db_user" --password="$db_pass" --single-transaction --force --opt --databases "$db" | gzip -c -9 > "$tmpfile"
+
+        # upload to s3
+        printf "uploading \e[0;36m%s\e[00m to \e[0;35m%s\e[00m...\n" $tmpfile "s3://$bucket/$serverid/$datefolder/$filename"
+        s3cmd put "$tmpfile" "s3://$bucket/$serverid/$datefolder/$filename"
+
+        # delete
+        printf "removing temporary file \e[0;36m%s\e[00m...\n" $tmpfile
+        rm -f "$tmpfile"
+
+    done;
+
+    if [ -n "$notify_url" ]; then
+        timetaken=$[$(date +%s)-$starttime]
+        count=${#db_databases[@]}
+        printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
+        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=database&serverid=$serverid&time=$timetaken&databases=" $notify_url > /dev/null
+    fi
 fi
 
 printf "backup complete @ \e[1;32m%s\e[00m\n" `date +"%H:%m"`
