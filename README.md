@@ -44,6 +44,7 @@ It is recommended that you create a IAM user per server/backup area.
 
 5. Go into `Policies` and create a new policy.
 Use the following:
+
     {
         "Version": "2012-10-17",
         "Statement": [
@@ -78,7 +79,7 @@ Use the following:
             }
         ]
     }
-This will allow the user to access only the `FOLDER` path in `BUCKET`, this means we can use 1 bucket for multiple server's backups keeping them secure.
+    This will allow the user to access only the `FOLDER` path in `BUCKET`, this means we can use 1 bucket for multiple server's backups keeping them secure.
 
 6. Attach this "Customer Managed" policy to the User created previously.
 
