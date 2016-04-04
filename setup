@@ -47,7 +47,7 @@ echo " 3. Run the backup "
 echo " 0. Exit "
 echo " "
 read -p "Enter selection: " selection
-if [[ ! $selection =~ ^[123]$ ]]; then
+if [[ ! $selection =~ ^[0123]$ ]]; then
     echo "Error: Invalid selection: $selection"
     exit 1;
 fi
