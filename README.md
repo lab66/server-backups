@@ -44,42 +44,40 @@ It is recommended that you create a IAM user per server/backup area.
 
 5. Go into `Policies` and create a new policy.
 Use the following:
-
-    {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Sid": "AllowListingOfUserFolder",
-                "Action": [
-                    "s3:ListBucket"
-                ],
-                "Effect": "Allow",
-                "Resource": [
-                    "arn:aws:s3:::BUCKET"
-                ],
-                "Condition": {
-                    "StringLike": {
-                        "s3:prefix": [
-                            "FOLDER"
-                        ]
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Sid": "AllowListingOfUserFolder",
+                    "Action": [
+                        "s3:ListBucket"
+                    ],
+                    "Effect": "Allow",
+                    "Resource": [
+                        "arn:aws:s3:::BUCKET"
+                    ],
+                    "Condition": {
+                        "StringLike": {
+                            "s3:prefix": [
+                                "FOLDER"
+                            ]
+                        }
                     }
+                },
+                {
+                    "Effect": "Allow",
+                    "Action": [
+                        "s3:ListBucket",
+                        "s3:PutObject",
+                        "s3:GetObject",
+                        "s3:GetObjectVersion",
+                        "s3:DeleteObject",
+                        "s3:DeleteObjectVersion"
+                    ],
+                    "Resource": "arn:aws:s3:::BUCKET/FOLDER/*"
                 }
-            },
-            {
-                "Effect": "Allow",
-                "Action": [
-                    "s3:ListBucket",
-                    "s3:PutObject",
-                    "s3:GetObject",
-                    "s3:GetObjectVersion",
-                    "s3:DeleteObject",
-                    "s3:DeleteObjectVersion"
-                ],
-                "Resource": "arn:aws:s3:::BUCKET/FOLDER/*"
-            }
-        ]
-    }
-
+            ]
+        }
 This will allow the user to access only the `FOLDER` path in `BUCKET`, this means we can use 1 bucket for multiple server's backups keeping them secure.
 
 6. Attach this "Customer Managed" policy to the User created previously.
