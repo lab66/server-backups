@@ -1,8 +1,8 @@
 #!/bin/bash
-# if [ "$(whoami)" != 'root' ]; then
-#     echo "Error: This script must be run as the root user"
-#     exit 1
-# fi
+if [ "$(whoami)" != 'root' ]; then
+    echo "Error: This script must be run as the root user"
+    exit 1
+fi
 
 if [ ! -f ".env" ]; then
     echo "Error: Config not present, please copy .env.example to .env"
@@ -14,10 +14,10 @@ if [ ! -f ".s3cmd" ]; then
     exit 1
 fi
 
-# if [ ! -e "/usr/bin/s3cmd" ]; then
-#     echo "Error: s3cmd not found, please run setup"
-#     exit 1
-# fi
+if [ ! -e "/usr/bin/s3cmd" ]; then
+    echo "Error: s3cmd not found, please run setup"
+    exit 1
+fi
 
 source ".env"
 
@@ -34,7 +34,7 @@ if [ "$file_backups" = true ]; then
     starttime=$(date +%s)
     if [ -n "$notify_url" ]; then
         printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
-        curl --silent -X POST -d "event=backup_started&type=files&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid" $notify_url > /dev/null
+        curl --silent -X POST -d "event=backup_started&bucket=$bucket&type=files&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid" $notify_url > /dev/null
     fi
 
     # Dump and zip
@@ -53,16 +53,16 @@ if [ "$file_backups" = true ]; then
         timetaken=$[$(date +%s)-$starttime]
         filesize=`wc -c < $tmpfile`
         printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
-        curl --silent -X POST -d "event=backup_complete&type=files&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid&time=$timetaken&size=$filesize" $notify_url > /dev/null
+        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=files&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid&time=$timetaken&size=$filesize" $notify_url > /dev/null
     fi
+
+    # Upload
+    printf "uploading \e[0;36m%s\e[00m to \e[0;35m%s\e[00m...\n" $tmpfile "s3://$bucket/$serverid/$datefolder/$filename"
+    s3cmd put "$tmpfile" "s3://$bucket/$serverid/$datefolder/$filename"
+
+    # Delete
+    printf "removing temporary file \e[0;36m%s\e[00m...\n" $tmpfile
+    rm -f "$tmpfile"
 fi
-
-# Upload
-printf "uploading \e[0;36m%s\e[00m to \e[0;35m%s\e[00m...\n" $tmpfile "s3://$bucket/$serverid/$datefolder/$filename"
-#s3cmd put "$tmpfile" "s3://$bucket/$serverid/$datefolder/$filename"
-
-# Delete
-printf "removing temporary file \e[0;36m%s\e[00m...\n" $tmpfile
-# rm -f "$tmpfile"
 
 printf "backup complete @ \e[1;32m%s\e[00m\n" `date +"%H:%m"`
