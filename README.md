@@ -2,7 +2,7 @@
 
 This is the script we use to backup our servers to S3.
 
-# Download
+## Download
 
 Download using the following commands:
 
