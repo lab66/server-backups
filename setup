@@ -10,8 +10,8 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
-if [ ! -f ".s3cmd" ]; then
-    echo "Error: s3cmd has not been configured, please copy .s3cmd.example to .s3cmd"
+if [ ! -f ".s3cfg" ]; then
+    echo "Error: s3cmd has not been configured, please copy .s3cfg.example to .s3cfg"
     exit 1
 fi
 

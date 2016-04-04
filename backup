@@ -9,8 +9,8 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
-if [ ! -f ".s3cmd" ]; then
-    echo "Error: s3cmd has not been configured, please copy .s3cmd.example to .s3cmd"
+if [ ! -f ".s3cfg" ]; then
+    echo "Error: s3cmd has not been configured, please copy .s3cfg.example to .s3cfg"
     exit 1
 fi
 
@@ -59,7 +59,7 @@ if [ "$file_backups" = true ]; then
 
     # upload
     printf "uploading \e[0;36m%s\e[00m to \e[0;35m%s\e[00m...\n" $tmpfile "s3://$bucket/$serverid/$datefolder/$filename"
-    s3cmd put "$tmpfile" "s3://$bucket/$serverid/$datefolder/$filename"
+    s3cmd --config=".s3cfg" put "$tmpfile" "s3://$bucket/$serverid/$datefolder/$filename"
 
     # delete
     printf "removing temporary file \e[0;36m%s\e[00m...\n" $tmpfile
@@ -101,7 +101,7 @@ if [ "$db_backups" = true ]; then
 
         # upload to s3
         printf "uploading \e[0;36m%s\e[00m to \e[0;35m%s\e[00m...\n" $tmpfile "s3://$bucket/$serverid/$datefolder/$filename"
-        s3cmd put "$tmpfile" "s3://$bucket/$serverid/$datefolder/$filename"
+        s3cmd --config=".s3cfg" put "$tmpfile" "s3://$bucket/$serverid/$datefolder/$filename"
 
         # delete
         printf "removing temporary file \e[0;36m%s\e[00m...\n" $tmpfile
