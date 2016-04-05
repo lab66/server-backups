@@ -90,7 +90,8 @@ if [ "$db_backups" = true ]; then
     if [ -n "$notify_url" ]; then
         printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
         servertime=$(date)
-        curl --silent -X POST -d "event=backup_started&bucket=$bucket&type=database&serverid=$serverid&servertime=$servertime" $notify_url > /dev/null
+        filename="$datetime-DB.sql.gz"
+        curl --silent -X POST -d "event=backup_started&bucket=$bucket&type=database&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid&servertime=$servertime" $notify_url > /dev/null
     fi
 
     # loop the databases
