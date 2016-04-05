@@ -115,10 +115,9 @@ if [ "$db_backups" = true ]; then
 
     if [ -n "$notify_url" ]; then
         timetaken=$[$(date +%s)-$starttime]
-        count=${#db_databases[@]}
-        printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
         servertime=$(date)
-        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=database&serverid=$serverid&servertime=$servertime&time=$timetaken&databases=$count" $notify_url > /dev/null
+        printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
+        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=database&serverid=$serverid&servertime=$servertime&time=$timetaken&databases=$db_databases" $notify_url > /dev/null
     fi
 fi
 
