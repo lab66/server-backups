@@ -41,7 +41,8 @@ if [ "$file_backups" = true ]; then
 
     # Dump and zip
     printf "creating \e[0;36m%s\e[00m...\n" $tmpfile
-    backupcmd="tar -czf $tmpfile"
+    # @debug this works on command line but not in bash script
+    backupcmd="tar --transform 's#^#${serverid}/#' -czf $tmpfile"
     if [ -n "$file_excludes" ]; then
         for exclude in $file_excludes
         do
@@ -61,7 +62,7 @@ if [ "$file_backups" = true ]; then
         filesize=`wc -c < $tmpfile`
         printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
         servertime=$(date)
-        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=files&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid&servertime=$servertime&duration=$timetaken&size=$filesize" $notify_url > /dev/null
+        curl --silent -X POST -d "event=backup_completed&bucket=$bucket&type=files&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid&servertime=$servertime&duration=$timetaken&size=$filesize" $notify_url > /dev/null
     fi
 
     # delete
@@ -118,7 +119,7 @@ if [ "$db_backups" = true ]; then
         servertime=$(date)
         filename="$datetime-DB.sql.gz"
         printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
-        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=database&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid&servertime=$servertime&duration=$timetaken&databases=$db_databases" $notify_url > /dev/null
+        curl --silent -X POST -d "event=backup_completed&bucket=$bucket&type=database&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid&servertime=$servertime&duration=$timetaken&databases=$db_databases" $notify_url > /dev/null
     fi
 fi
 
