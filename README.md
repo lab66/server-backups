@@ -6,6 +6,7 @@ This is the script we use to backup our servers to S3.
 
 * MySQL command line tools (e.g. `mysql`)
 * [s3cmd](http://s3tools.org/s3cmd)
+* python-magic (recommended, for correct mime-types)
 
 ## Download
 
