@@ -90,4 +90,5 @@ Note: To test, use `s3cmd --config=".s3cfg" ls s3://BUCKET/FOLDER`. If you see P
 
 ## Roadmap
 
+* Send a unique ID for each backup, incase multiple backups do run at the same time
 * Self-update tool
