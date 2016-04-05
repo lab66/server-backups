@@ -61,7 +61,7 @@ if [ "$file_backups" = true ]; then
         filesize=`wc -c < $tmpfile`
         printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
         servertime=$(date)
-        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=files&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid&servertime=$servertime&time=$timetaken&size=$filesize" $notify_url > /dev/null
+        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=files&path=$serverid/$datefolder/$filename&file=$filename&folder=$datefolder&serverid=$serverid&servertime=$servertime&duration=$timetaken&size=$filesize" $notify_url > /dev/null
     fi
 
     # delete
@@ -117,7 +117,7 @@ if [ "$db_backups" = true ]; then
         timetaken=$[$(date +%s)-$starttime]
         servertime=$(date)
         printf "pinging \e[0;36m%s\e[00m...\n" $notify_url
-        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=database&serverid=$serverid&servertime=$servertime&time=$timetaken&databases=$db_databases" $notify_url > /dev/null
+        curl --silent -X POST -d "event=backup_complete&bucket=$bucket&type=database&serverid=$serverid&servertime=$servertime&duration=$timetaken&databases=$db_databases" $notify_url > /dev/null
     fi
 fi
 
