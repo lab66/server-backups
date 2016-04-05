@@ -87,3 +87,7 @@ This will allow the user to access only the `FOLDER` path in `BUCKET`, this mean
 7. Rinse and repeat for each server backup.
 
 Note: To test, use `s3cmd --config=".s3cfg" ls s3://BUCKET/FOLDER`. If you see Permission denied this has not worked.
+
+## Roadmap
+
+* Self-update tool
