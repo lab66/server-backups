@@ -42,7 +42,8 @@ if [ "$file_backups" = true ]; then
     # Dump and zip
     printf "creating \e[0;36m%s\e[00m...\n" $tmpfile
     # @debug this works on command line but not in bash script
-    backupcmd="tar --transform 's#^#${serverid}/#' -czf $tmpfile"
+    # backupcmd="tar --transform 's#^#${serverid}/#' -czf $tmpfile"
+    backupcmd="tar -czf $tmpfile"
     if [ -n "$file_excludes" ]; then
         for exclude in $file_excludes
         do
