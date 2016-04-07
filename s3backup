@@ -1,0 +1,247 @@
+#!/bin/bash
+cd $( cd "$(dirname "${BASH_SOURCE}")" ; pwd -P )
+
+# constants
+VERSION="1.0.0"
+REPO_PATH="lab66/server-backups"
+REQUIREMENTS=(".s3cfg" ".env")
+DEPENDENCIES=("uuidgen" "s3cmd")
+CMD=$1
+STARTED=$(date +%s)
+
+# everyone likes colors
+red=$(tput bold;tput setaf 1)
+green=$(tput bold;tput setaf 2)
+yellow=$(tput bold;tput setaf 3)
+fawn=$(tput setaf 3)
+blue=$(tput bold;tput setaf 4)
+purple=$(tput setaf 5)
+pink=$(tput bold;tput setaf 5)
+cyan=$(tput bold;tput setaf 6)
+gray=$(tput bold;tput setaf 0)
+white=$(tput bold;tput setaf 7)
+normal=$(tput sgr0)
+
+# smart output
+output() {
+    printf "[%s%s%s] %s%s%s ... %s\n" "$cyan" $(date +"%H:%M:%S") "$normal"  "$white" "$*" "$gray" "$normal"
+}
+
+error () {
+    printf "[%sError%s] %s%s%s ... %s\n" "$red" "$normal" "$white" "$*" "$gray" "$normal"
+}
+
+# initial checks
+for req in "${REQUIREMENTS[@]}"; do
+    if [ ! -f ${req} ]; then
+        printf "Downloading base configuration %s%s%s... " "$cyan" "$req" "$normal"
+        wget --quiet --output-document="${req}" "https://raw.githubusercontent.com/${REPO_PATH}/master/{$req}"
+        printf "%sDONE%s\n" "$green" "$normal"
+        CMD="configure"
+    fi
+done
+
+for cmd in "${DEPENDENCIES[@]}"; do
+    if [ ! -e "/usr/bin/${cmd}" ]; then
+        error "terminal command '$cmd' not found, please install"
+        exit 1
+    fi
+done
+
+# load the config
+source ".env"
+uuid="$(uuidgen)"
+
+# notification helper
+notify() {
+    if [ -n "$notify_url" ]; then
+        local postdata=("uuid=$uuid" "serverid=$serverid" "bucket=$bucket" "servertime=$(date)" "runtime=$[$(date +%s)-$STARTED]");
+        local IFS="&";
+        while (($#)); do postdata+=("$1=$2"); shift 2; done;
+        curl --silent --request "POST" --data "${postdata[*]}" "$notify_url" > /dev/null
+        unset IFS;
+    fi
+}
+
+# run
+cmd_run() {
+    datetime=`date +"%Y-%m-%d-%H%M"`
+    datefolder=`date +"%y%m %B %Y"`
+    path="$serverid/$serverid/$datefolder"
+    output "Starting backup(s)"
+    # File backups
+    if [ "$file_backups" = true ]; then
+        # Define our filenames
+        filename="$datetime-files.tar.gz"
+        tmpfile="/tmp/$filename"
+        starttime=$(date +%s)
+        notify "event" "backup_started" "type" "files" "path" "$path" "file" "$filename"
+        # Dump and zip
+        output "Creating backup file $blue$tmpfile$white with $cyan$file_folders$white"
+        backupcmd="tar -czf $tmpfile"
+        if [ -n "$file_excludes" ]; then
+            for exclude in $file_excludes
+            do
+                backupcmd="$backupcmd --exclude='$exclude'"
+            done
+        fi
+        output=$("$backupcmd $file_folders")
+        # upload
+        output "Uploading file backup $blue$tmpfile$white to$cyan S3 $white"
+        s3cmd --config=".s3cfg" put "$tmpfile" "s3://$bucket/$path/$filename"
+        # calculate time and notify API
+        duration=$[$(date +%s)-$starttime]
+        size=`wc -c < $tmpfile`
+        notify "event" "backup_completed" "type" "files" "path" "$path" "file" "$filename" "duration" "$duration" "size" "$size"
+        # remove temporary file
+        output "Deleting temporary file $blue$tmpfile"
+        rm -f "$tmpfile"
+
+    fi
+    # Database backups
+    if [ "$db_backups" = true ]; then
+        # make sure mysql can connect
+        mysqltest=$(mysql -u "$db_user" --password="$db_pass" -e "SELECT 'MYSQLOK';" 2>&1;)
+        if [[ "$mysqltest" != *"MYSQLOK"* ]]; then
+            error "Unable to connect to the MySQL server.";
+            exit 1
+        fi
+
+        # if all databases, crawl databases
+        if [ $db_databases = "all" ]; then
+            db_databases=`mysql -u "$db_user" --password="$db_pass" -e "SHOW DATABASES;" | tr -d "| " | grep -v "\(Database\|information_schema\|sys\|innodb\|tmp\|performance_schema\|mysql\|test\)"`
+        fi
+
+        # loop the databases
+        for db in $db_databases; do
+            filename="$datetime-$db.sql.gz"
+            tmpfile="/tmp/$filename"
+            starttime=$(date +%s)
+            # notify the api server
+            notify "event" "backup_started" "type" "database" "path" "$path" "file" "$filename"
+            # export & save
+            output "Exporting database $blue$db$white to $cyan$tmpfile"
+            mysqldump -u "$db_user" --password="$db_pass" --single-transaction --force --opt --databases "$db" | gzip -c -9 > "$tmpfile"
+            # upload to s3
+            output "Uploading database backup $blue$tmpfile$white to$cyan S3 $white"
+            s3cmd --config=".s3cfg" put "$tmpfile" "s3://$bucket/$path/$filename"
+            # notify api of completion
+            duration=$[$(date +%s)-$starttime]
+            size=`wc -c < $tmpfile`
+            notify "event" "backup_completed" "type" "database" "path" "$path" "file" "$filename" "duration" "$duration" "size" "$size"
+            # delete
+            output "Deleting temporary file $blue$tmpfile"
+            rm -f "$tmpfile"
+        done;
+    fi
+    # summary
+    duration=$[$(date +%s)-$STARTED]
+    output "Backup completed after $green$duration$white second(s)"
+}
+
+# update
+cmd_update() {
+    printf "Checking for update...\n"
+    md5local=$(md5 -q ${0##*/})
+    printf "Local MD5: %s\n" $md5local
+    md5remote=$(wget --quiet --quiet --output-document="-" https://raw.githubusercontent.com/lab66/server-backups/master/$file | md5)
+    printf "Remote MD5: %s\n" $md5remote
+
+    if [ $md5local != $md5remote ]; then
+        printf "Update available!\n"
+        read -e -p 'Do you want to download? [Y/n]: ' do_update
+        if [[ $do_update =~ ^([yY]?)$ ]]; then
+            #wget --quiet --quiet --output-document="${0##*/}" https://raw.githubusercontent.com/lab66/server-backups/master/$file
+            printf "Updated!"
+        fi
+    fi
+}
+
+# configure
+cmd_configure() {
+    printf "\e[97mEntering backup configuration\e[00m ... \e[90m(Ctrl-C to cancel) \e[00m\n\n"
+    # get the amazon config
+    source <(grep -E "^(access|secret)" .s3cfg | sed 's/ *= */=/g')
+    local false_regex='^(false|n|N|no|No|NO)$'
+    # if a server is not set, default to hostname
+    if [[ -z "$serverid" ]]; then
+        serverid=$(hostname -s)
+    fi
+    # set the server name, loop until correct
+    while true; do
+        read -i "$serverid" -e -p "What is the Server ID: " sid
+        [ -z "$sid" ] && sid="$serverid"
+        [[ "$sid" =~ ^[a-zA-Z0-9-]+$ ]] && break;
+        printf "Error: Server ID can only contain alphanumeric characters.\n"
+    done
+    serverid="$sid"
+
+    # get the rest of the details, less restrictive
+    read -i "$access_key" -e -p "Enter the Amazon Access Key: " access_key
+    read -i "$secret_key" -e -p "Enter the Amazon Secret Key: " secret_key
+    read -i "$bucket" -e -p "Enter the Amazon S3 Bucket: " bucket
+
+    read -i "$notify_url" -e -p "Enter the API Notification URL: " notify_url
+
+    read -i "$file_backups" -e -p "Are file backups enabled (true/false)? " file_backups
+    [[ "$file_backups" =~ $false_regex ]] && file_backups="false" || file_backups="true"
+    if [[ "$file_backups" = "true" ]]; then
+        read -i "$file_folders" -e -p "Enter the folders to backup (seperated by spaces): " file_folders
+        read -i "$file_excludes" -e -p "Enter the paths/files to exclude from backup (seperated by spaces): " file_excludes
+    fi
+
+    read -i "$db_backups" -e -p "Are MySQL Database backups enabled (true/false)? " db_backups
+    [[ "$db_backups" =~ $false_regex ]] && db_backups="false" || db_backups="true"
+    if [[ "$db_backups" = "true" ]]; then
+        read -i "$db_user" -e -p "Enter the MySQL Username: " db_user
+        read -i "$db_pass" -e -p "Enter the MySQL Password: " db_pass
+        read -i "$db_databases" -e -p "Enter the MySQL Databases (seperated by spaces or 'all'): " db_databases
+    fi
+
+    printf "\nSaving configuration ... "
+
+    # set all the variables in the .env
+    local env_variables=("serverid" "bucket" "notify_url" "file_backups" "file_folders" "file_excludes" "db_backups" "db_user" "db_pass" "db_databases")
+    for key in "${env_variables[@]}"
+    do
+        sed -i -r "s|^($key=)[\"\']?[^\n]+[\"\']?|\1\"${!key}\"|g" .env
+    done
+
+    # set all the variables in the .s3cfg
+    local s3_variables=("access_key" "secret_key")
+    for key in "${s3_variables[@]}"
+    do
+        sed -i -r "s|^($key)\s*=\s*[^\n]*|\1 = ${!key}|g" .s3cfg
+    done
+
+    printf "%sDONE%s\n" "$green" "$normal"
+}
+
+# help
+cmd_help() {
+    printf "S3Backup by Lab66.io version %s\n" $VERSION
+    printf "\n"
+    printf "\e[97mAvailable tasks:\e[00m\n"
+    printf "\n"
+    printf "   \e[92mrun\e[00m \e[90m............\e[97m run the configured backup\n"
+    printf "   \e[92mupdate\e[00m \e[90m.........\e[97m update %s\n" ${0##*/}
+    printf "   \e[92mconfigure\e[00m \e[90m......\e[97m configure %s for this server\n" ${0##*/}
+    printf "\n"
+    printf "\e[97mUsage:\e[00m %s {task}\n" ${0##*/}
+}
+
+# initialize
+case "$CMD" in
+    run)
+        cmd_run
+        ;;
+    update)
+        cmd_update
+        ;;
+    configure)
+        cmd_configure
+        ;;
+    *)
+        cmd_help
+        exit 1
+esac
