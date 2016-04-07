@@ -67,7 +67,7 @@ notify() {
 cmd_run() {
     datetime=`date +"%Y-%m-%d-%H%M"`
     datefolder=`date +"%y%m %B %Y"`
-    path="$serverid/$serverid/$datefolder"
+    path="$serverid/$datefolder"
     output "Starting backup(s)"
     # File backups
     if [ "$file_backups" = true ]; then
