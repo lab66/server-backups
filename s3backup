@@ -142,9 +142,9 @@ cmd_run() {
 # update
 cmd_update() {
     output "Checking for update"
-    md5local=$(md5 -q ${0##*/})
+    md5local=$(md5sum -q ${0##*/})
     output "Local MD5: $md5local"
-    md5remote=$(wget --quiet --quiet --output-document="-" https://raw.githubusercontent.com/lab66/server-backups/master/$file | md5)
+    md5remote=$(wget --quiet --quiet --output-document="-" https://raw.githubusercontent.com/lab66/server-backups/master/$file | md5sum -q)
     output "Remote MD5: $md5remote"
 
     if [ $md5local != $md5remote ]; then
