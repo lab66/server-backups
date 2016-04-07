@@ -144,8 +144,8 @@ cmd_update() {
     filename=${0##*/}
     output "Checking for update"
 
-    response=$(wget --quiet --quiet --output-document="$filename.tmp" https://raw.githubusercontent.com/lab66/server-backups/master/$filename)
-    if ! response ; then
+    response=$(wget --quiet --quiet --output-document="$filename.tmp" "https://raw.githubusercontent.com/lab66/server-backups/master/$filename")
+    if [[ ! -f "$filename.tmp" ]]; then
         error "Unable to download updated $file"
         exit 1
     fi
@@ -157,7 +157,7 @@ cmd_update() {
     fi
 
     md5local=($(md5sum "$filename"))
-    md5local=($(md5sum "$filename.tmp"))
+    md5remote=($(md5sum "$filename.tmp"))
 
     output "Local MD5: $md5local"
     output "Remote MD5: $md5remote"
