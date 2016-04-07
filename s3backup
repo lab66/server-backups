@@ -170,11 +170,10 @@ cmd_update() {
     output "$cyan Update available"
     read -e -p 'Do you want to download? [Y/n]: ' do_update
     if [[ $do_update =~ ^([yY]?)$ ]]; then
-        mv "$filename.tmp" "$filename"
+        cat "$filename.tmp" > "$filename"
         output "s3backup has been$green updated!"
-    else
-        rm "$filename.tmp"
     fi
+    rm "$filename.tmp"
 }
 
 # configure
