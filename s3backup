@@ -223,7 +223,7 @@ cmd_configure() {
     local env_variables=("serverid" "bucket" "notify_url" "file_backups" "file_folders" "file_excludes" "db_backups" "db_user" "db_pass" "db_databases")
     for key in "${env_variables[@]}"
     do
-        sed -i -r "s|^($key=)[\"\']?[^\n]+[\"\']?|\1\"${!key}\"|g" .env
+        sed -i -r "s|^($key=)[\"\']?[^\n]*[\"\']?|\1\"${!key}\"|g" .env
     done
 
     # set all the variables in the .s3cfg
