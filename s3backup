@@ -144,10 +144,10 @@ cmd_update() {
     output "Checking for update"
     md5local=$(md5sum ${0##*/} | awk '{ print $1 }')
     output "Local MD5: $md5local"
-    md5remote=$(wget --quiet --quiet --output-document="-" https://raw.githubusercontent.com/lab66/server-backups/master/$file | md5sum)
+    md5remote=$(wget --quiet --quiet --output-document="-" https://raw.githubusercontent.com/lab66/server-backups/master/$file | md5sum | awk '{ print $1 }')
     output "Remote MD5: $md5remote"
 
-    if [ $md5local != $md5remote ]; then
+    if [[ "$md5local" != "$md5remote" ]]; then
         output "$cyan Update available"
         read -e -p 'Do you want to download? [Y/n]: ' do_update
         if [[ $do_update =~ ^([yY]?)$ ]]; then
