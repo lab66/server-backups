@@ -141,19 +141,39 @@ cmd_run() {
 
 # update
 cmd_update() {
+    filename=${0##*/}
     output "Checking for update"
-    md5local=$(md5sum ${0##*/} | awk '{ print $1 }')
+
+    response=$(wget --quiet --quiet --output-document="$filename.tmp" https://raw.githubusercontent.com/lab66/server-backups/master/$filename)
+    if ! response ; then
+        error "Unable to download updated $file"
+        exit 1
+    fi
+
+    filesize=$(wc -c <"$filename.tmp")
+    if [[ "$filesize" -lt 100 ]]; then
+        error "Downloaded file too small at $filesize bytes"
+        exit 1
+    fi
+
+    md5local=($(md5sum "$filename"))
+    md5local=($(md5sum "$filename.tmp"))
+
     output "Local MD5: $md5local"
-    md5remote=$(wget --quiet --quiet --output-document="-" https://raw.githubusercontent.com/lab66/server-backups/master/$file | md5sum | awk '{ print $1 }')
     output "Remote MD5: $md5remote"
 
-    if [[ "$md5local" != "$md5remote" ]]; then
-        output "$cyan Update available"
-        read -e -p 'Do you want to download? [Y/n]: ' do_update
-        if [[ $do_update =~ ^([yY]?)$ ]]; then
-            wget --quiet --quiet --output-document="${0##*/}" https://raw.githubusercontent.com/lab66/server-backups/master/$file
-            output "s3backup has been$green updated!"
-        fi
+    if [[ "$md5local" = "$md5remote" ]]; then
+        error "No update available"
+        exit 1
+    fi
+
+    output "$cyan Update available"
+    read -e -p 'Do you want to download? [Y/n]: ' do_update
+    if [[ $do_update =~ ^([yY]?)$ ]]; then
+        mv "$filename.tmp" "$filename"
+        output "s3backup has been$green updated!"
+    else
+        rm "$filename.tmp"
     fi
 }
 
