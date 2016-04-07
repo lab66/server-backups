@@ -108,8 +108,13 @@ cmd_run() {
         fi
 
         # if all databases, crawl databases
-        if [ $db_databases = "all" ]; then
+        if [[ $db_databases = "all" ]]; then
             db_databases=`mysql -u "$db_user" --password="$db_pass" -e "SHOW DATABASES;" | tr -d "| " | grep -v "\(Database\|information_schema\|sys\|innodb\|tmp\|performance_schema\|mysql\|test\)"`
+        fi
+
+        if [[ ! -n $db_databases ]]; then
+            error "No mysql databases to backup"
+            exit 1
         fi
 
         # loop the databases
