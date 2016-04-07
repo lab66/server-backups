@@ -141,18 +141,18 @@ cmd_run() {
 
 # update
 cmd_update() {
-    printf "Checking for update...\n"
+    output "Checking for update"
     md5local=$(md5 -q ${0##*/})
-    printf "Local MD5: %s\n" $md5local
+    output "Local MD5: $md5local"
     md5remote=$(wget --quiet --quiet --output-document="-" https://raw.githubusercontent.com/lab66/server-backups/master/$file | md5)
-    printf "Remote MD5: %s\n" $md5remote
+    output "Remote MD5: $md5remote"
 
     if [ $md5local != $md5remote ]; then
-        printf "Update available!\n"
+        output "$cyan Update available"
         read -e -p 'Do you want to download? [Y/n]: ' do_update
         if [[ $do_update =~ ^([yY]?)$ ]]; then
-            #wget --quiet --quiet --output-document="${0##*/}" https://raw.githubusercontent.com/lab66/server-backups/master/$file
-            printf "Updated!"
+            wget --quiet --quiet --output-document="${0##*/}" https://raw.githubusercontent.com/lab66/server-backups/master/$file
+            output "s3backup has been$green updated!"
         fi
     fi
 }
