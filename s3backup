@@ -85,7 +85,7 @@ cmd_run() {
                 backupcmd="$backupcmd --exclude='$exclude'"
             done
         fi
-        output=$("$backupcmd $file_folders")
+        output=`$backupcmd $file_folders`
         # upload
         output "Uploading file backup $blue$tmpfile$white to$cyan S3 $white"
         s3cmd --config=".s3cfg" put "$tmpfile" "s3://$bucket/$path/$filename"
